@@ -145,6 +145,13 @@ describe MetaInspector do
     end
   end
 
+  describe 'Relative links with empty or blank base' do
+    it 'should get the relative links from a document' do
+      m = MetaInspector.new('http://relativewithemptybase.com/company')
+      expect(m.links.internal).to eq(['http://relativewithemptybase.com/about', 'http://relativewithemptybase.com/sitemap'])
+    end
+  end
+
   describe 'Relative links with base' do
     it 'should get the relative links from a document' do
       m = MetaInspector.new('http://relativewithbase.com/company/page2')
@@ -190,20 +197,37 @@ describe MetaInspector do
     end
   end
 
-  describe "Feed" do
-    it "should get rss feed" do
-      @m = MetaInspector.new('http://www.iteh.at')
-      expect(@m.feed).to eq('http://www.iteh.at/de/rss/')
+  context "Feeds" do
+    let(:meta) { MetaInspector.new('http://feeds.example.com') }
+
+    describe "#feeds" do
+      it "should return all the document's feeds" do
+        expected = [
+          { title: "Articles - JSON Feed", href: "https://example.org/feed.json",          type: "application/json" },
+          { title: "Comments - JSON Feed", href: "https://example.org/feed/comments.json", type: "application/json" },
+          { title: "Articles - RSS Feed",  href: "https://example.org/feed.rss",           type: "application/rss+xml" },
+          { title: "Comments - RSS Feed",  href: "https://example.org/feed/comments.rss",  type: "application/rss+xml" },
+          { title: "Articles - Atom Feed", href: "https://example.org/feed.xml",           type: "application/atom+xml" },
+          { title: "Comments - Atom Feed", href: "https://example.org/feed/comments.xml",  type: "application/atom+xml" }
+        ]
+        expect(meta.feeds).to eq(expected)
+      end
+
+      it "should return nothing if no feeds found" do
+        @m = MetaInspector.new('http://www.alazan.com')
+        expect(@m.feeds).to eq([])
+      end
     end
 
-    it "should get atom feed" do
-      @m = MetaInspector.new('http://www.tea-tron.com/jbravo/blog/')
-      expect(@m.feed).to eq('http://www.tea-tron.com/jbravo/blog/feed/')
-    end
+    describe "#feed" do
+      it "should return the first feed's href" do
+        expect(meta.feed).to eq("https://example.org/feed.rss")
+      end
 
-    it "should return nil if no feed found" do
-      @m = MetaInspector.new('http://www.alazan.com')
-      expect(@m.feed).to eq(nil)
+      it "should give a deprecation warning" do
+        warning = "DEPRECATION: Use MetaInspector#feeds instead of #feed. The former gives you all feeds and their metadata, the latter will be removed.\n"
+        expect { meta.feed }.to output(warning).to_stderr
+      end
     end
   end
 end
